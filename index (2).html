@@ -1,0 +1,287 @@
+<meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mine it & Earn it</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body, html {
+    margin:0;
+    padding:0;
+    font-family: 'Poppins', sans-serif;
+    height:100%;
+    overflow:hidden;
+    background: linear-gradient(270deg,#00c6ff,#0072ff,#00ff99,#00c6ff);
+    background-size:800% 800%;
+    animation: gradientBG 15s ease infinite;
+}
+
+@keyframes gradientBG{
+    0%{background-position:0% 50%}
+    50%{background-position:100% 50%}
+    100%{background-position:0% 50%}
+}
+
+section{
+    width:100%;
+    height:100%;
+    display:none;
+    justify-content:center;
+    align-items:center;
+    flex-direction:column;
+    text-align:center;
+    color:#fff;
+    position:absolute;
+    top:0;
+    left:0;
+    overflow:hidden;
+}
+section.active{display:flex;}
+
+h1{animation: glowText 2s ease-in-out infinite alternate;}
+@keyframes glowText{
+    0%{text-shadow:0 0 10px #fff,0 0 20px #fff}
+    100%{text-shadow:0 0 20px #00ff99,0 0 40px #00ff99}
+}
+
+button{
+    padding:15px 40px;
+    font-size:1.2rem;
+    font-weight:600;
+    color:#0072ff;
+    background:#fff;
+    border:none;
+    border-radius:50px;
+    cursor:pointer;
+    transition:all 0.3s ease;
+    box-shadow:0 8px 20px rgba(0,0,0,0.3);
+}
+button:hover{
+    background:#00ff99;
+    color:#fff;
+    transform:translateY(-3px) scale(1.05);
+    box-shadow:0 12px 25px rgba(0,0,0,0.4);
+}
+
+/* Auth container */
+#authContainer{
+    background: rgba(255,255,255,0.25);
+    backdrop-filter: blur(10px);
+    padding:40px;
+    border-radius:20px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.2);
+    width:350px;
+    color:#000;
+    text-align:center;
+    animation: fadeIn 1s ease forwards;
+}
+#authContainer input{
+    width:100%;
+    padding:12px 15px;
+    margin:10px 0;
+    border-radius:8px;
+    border:1px solid #ccc;
+    font-size:1rem;
+}
+#authContainer .invalid{color:red;font-size:0.9rem;}
+#authContainer p.option span{color:#00ff99;cursor:pointer;font-weight:600;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+/* Mining Section */
+#miningContainer{position:relative;width:100%;height:100%;overflow:hidden;}
+.coin{
+    width:40px;height:40px;
+    background-image:url('https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Bitcoin.svg/1200px-Bitcoin.svg.png');
+    background-size:cover;
+    position:absolute;
+}
+#wallet{
+    position:absolute;
+    top:20px;
+    right:20px;
+    width:60px;height:60px;
+    background-image:url('https://cdn-icons-png.flaticon.com/512/634/634736.png');
+    background-size:cover;
+}
+#walletCount{
+    position:absolute;
+    top:85px;right:10px;color:#fff;font-weight:600;text-shadow:0 0 5px rgba(0,0,0,0.5);
+}
+/* Chart container */
+#chartContainer{
+    position:absolute;
+    bottom:30px;
+    width:80%;
+    max-width:500px;
+}
+
+/* Particles */
+.particle,.bgcoin{
+    position:absolute;
+    pointer-events:none;
+    animation: floatUp linear infinite;
+}
+.particle{background:rgba(255,255,255,0.7);border-radius:50%;}
+@keyframes floatUp{0%{transform:translateY(100vh) scale(0.5);opacity:0}50%{opacity:0.8}100%{transform:translateY(-10vh) scale(1);opacity:0}}
+
+/* Responsive */
+@media(max-width:600px){
+    h1{font-size:2.5rem;}
+    button{padding:12px 30px;font-size:1rem;}
+}
+</style>
+</head>
+<body>
+
+<!-- Intro -->
+<section id="intro" class="active">
+    <h1>Mine it & Earn it</h1>
+    <p>Start mining and earn crypto effortlessly with our app!</p>
+    <button onclick="showSection('auth')">Get Started</button>
+</section>
+
+<!-- Auth -->
+<section id="auth">
+    <div id="authContainer">
+        <h2 id="formTitle">Login</h2>
+        <input type="email" id="email" placeholder="Enter Gmail">
+        <input type="password" id="password" placeholder="Enter Password">
+        <div class="invalid" id="errorMsg"></div>
+        <button onclick="submitForm()">Submit</button>
+        <p class="option" id="switchText">New here? <span onclick="switchForm()">Signup Now</span></p>
+    </div>
+</section>
+
+<!-- Mining -->
+<section id="mining">
+    <div id="miningContainer">
+        <div id="wallet"></div>
+        <div id="walletCount">0.000000 BTC</div>
+        <div id="chartContainer"><canvas id="miningChart"></canvas></div>
+    </div>
+</section>
+
+<audio id="coinSound" src="https://www.soundjay.com/buttons/sounds/button-16.mp3" preload="auto"></audio>
+
+<script>
+// ---------- Section Navigation ----------
+function showSection(id){
+    document.querySelectorAll('section').forEach(sec=>sec.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+}
+
+// ---------- Particles ----------
+const colors=['#ffffff','#00fff7','#00ff99','#00c6ff'];
+function createBackground(sectionId,particleCount=30,coinCount=10){
+    const section=document.getElementById(sectionId);
+    for(let i=0;i<particleCount;i++){
+        const p=document.createElement('div');
+        p.classList.add('particle');
+        let size=Math.random()*8+4;
+        p.style.width=size+'px';
+        p.style.height=size+'px';
+        p.style.left=Math.random()*window.innerWidth+'px';
+        p.style.animationDuration=(5+Math.random()*10)+'s';
+        p.style.background=colors[Math.floor(Math.random()*colors.length)];
+        section.appendChild(p);
+    }
+    for(let i=0;i<coinCount;i++){
+        const c=document.createElement('div');
+        c.classList.add('bgcoin');
+        c.style.left=Math.random()*window.innerWidth+'px';
+        c.style.width=30+Math.random()*20+'px';
+        c.style.height=30+Math.random()*20+'px';
+        c.style.backgroundImage='url(https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Bitcoin.svg/1200px-Bitcoin.svg.png)';
+        c.style.backgroundSize='cover';
+        c.style.animationDuration=(6+Math.random()*8)+'s';
+        section.appendChild(c);
+    }
+}
+createBackground('intro',40,15);
+createBackground('auth',30,10);
+
+// ---------- AUTH LOGIC ----------
+let isLogin=true;
+function switchForm(){
+    isLogin=!isLogin;
+    document.getElementById('formTitle').innerText=isLogin?'Login':'Signup';
+    document.getElementById('switchText').innerHTML=isLogin?
+        'New here? <span onclick="switchForm()">Signup Now</span>':
+        'Already have an account? <span onclick="switchForm()">Login</span>';
+    document.getElementById('errorMsg').innerText='';
+    document.getElementById('email').value='';
+    document.getElementById('password').value='';
+}
+function submitForm(){
+    const email=document.getElementById('email').value.trim();
+    const password=document.getElementById('password').value.trim();
+    const errorMsg=document.getElementById('errorMsg');
+    if(!email.includes('@gmail.com')){errorMsg.innerText='Invalid Gmail address';return;}
+    if(password.length<6){errorMsg.innerText='Password must be at least 6 characters';return;}
+    showSection('mining');
+    startMining();
+}
+
+// ---------- MINING LOGIC ----------
+let cryptoEarned=0;
+let btcHistory=[];
+let ctx=document.getElementById('miningChart').getContext('2d');
+let miningChart=new Chart(ctx,{
+    type:'line',
+    data:{labels:[],datasets:[{label:'BTC Mined',data:[],borderColor:'#00ff99',backgroundColor:'rgba(0,255,153,0.2)',tension:0.3}]},
+    options:{responsive:true,animation:false,scales:{y:{beginAtZero:true}}}
+});
+
+function startMining(){
+    const miningContainer=document.getElementById('miningContainer');
+    const wallet=document.getElementById('wallet');
+    const walletCount=document.getElementById('walletCount');
+    const coinSound=document.getElementById('coinSound');
+
+    setInterval(()=>{
+        const coin=document.createElement('div');
+        coin.classList.add('coin');
+        coin.style.left=Math.random()*(window.innerWidth-40)+'px';
+        coin.style.top='90%';
+        miningContainer.appendChild(coin);
+
+        // Animate coin to wallet
+        let walletRect=wallet.getBoundingClientRect();
+        let coinRect=coin.getBoundingClientRect();
+        let dx=walletRect.left+walletRect.width/2 - coinRect.left;
+        let dy=walletRect.top+walletRect.height/2 - coinRect.top;
+
+        let duration=1000; // 1 sec animation
+        let start=performance.now();
+
+        function animateCoin(time){
+            let t=(time-start)/duration;
+            if(t>1)t=1;
+            coin.style.left=coinRect.left + dx*t + 'px';
+            coin.style.top=coinRect.top + dy*t + 'px';
+            if(t<1) requestAnimationFrame(animateCoin);
+            else {
+                coin.remove();
+                // Update BTC
+                cryptoEarned+=(Math.random()*0.0005).toFixed(6)*1;
+                walletCount.innerText=cryptoEarned.toFixed(6)+' BTC';
+                btcHistory.push(cryptoEarned.toFixed(6));
+                // Update chart
+                miningChart.data.labels.push('');
+                miningChart.data.datasets[0].data.push(cryptoEarned.toFixed(6));
+                if(miningChart.data.labels.length>20){
+                    miningChart.data.labels.shift();
+                    miningChart.data.datasets[0].data.shift();
+                }
+                miningChart.update();
+                coinSound.play();
+            }
+        }
+        requestAnimationFrame(animateCoin);
+    },500);
+}
+</script>
+</body>
+</html>
